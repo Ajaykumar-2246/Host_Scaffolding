@@ -3,6 +3,7 @@ const common = require("./webpack.common.js");
 const {
   ModuleFederationPlugin,
 } = require("@module-federation/enhanced/webpack");
+const CopyWebpackPlugin = require("copy-webpack-plugin");
 const path = require("path");
 const mfe_registry = require("./src/mfe-registry.js");
 const mfes = mfe_registry.mfe_apps;
@@ -65,6 +66,15 @@ module.exports = merge(common, {
           eager: false,
         },
       },
+    }),
+    // Copy _redirects file for Netlify SPA routing
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.resolve(__dirname, "public/_redirects"),
+          to: path.resolve(__dirname, "dist/_redirects"),
+        },
+      ],
     }),
   ],
 
