@@ -30,7 +30,7 @@ module.exports = merge(common, {
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "[name].[contenthash].js",
-    publicPath: '/mfe-host-app/', // Will be your production domain
+    publicPath: '/', // Will be your production domain
     clean: true,
   },
 
