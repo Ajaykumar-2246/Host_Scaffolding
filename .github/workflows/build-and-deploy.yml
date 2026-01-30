@@ -1,15 +1,17 @@
 name: Build and Deploy
 
 on:
-  # Trigger on push to main
+  # Trigger on push to main/master
   push:
     branches:
       - main
+      - master
   
   # Trigger on pull requests
   pull_request:
     branches:
       - main
+      - master
   
   # Allow manual trigger from GitHub UI
   workflow_dispatch:
@@ -164,7 +166,7 @@ jobs:
       # STEP 10: Deploy to GitHub Pages
       # ============================================
       - name: 🚀 Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -176,7 +178,7 @@ jobs:
       # STEP 11: Deployment summary
       # ============================================
       - name: 📊 Deployment summary
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "🎉 Deployment Successful!"
