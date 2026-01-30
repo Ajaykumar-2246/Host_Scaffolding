@@ -5,6 +5,7 @@
   "scripts": {
     "start": "webpack serve --config webpack.dev.js --open",
     "build": "npm run install-mfes && webpack --config webpack.prod.js",
+    "type-check": "tsc --noEmit",
     "install-mfes": "git submodule update --init --recursive && for d in mfe-submodules/*/; do (cd \"$d\" && npm install); done",
     "update-mfes": "git submodule update --remote --merge"
   },
