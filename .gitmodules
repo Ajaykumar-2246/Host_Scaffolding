@@ -1,0 +1,3 @@
+[submodule "mfe-submodules/mfe-dashboard"]
+	path = mfe-submodules/mfe-dashboard
+	url = https://github.com/Ajaykumar-2246/mfe-scaffolding.git
