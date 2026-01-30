@@ -5,7 +5,7 @@ module.exports = {
             title: 'Dashboard',
             route: '/dashboard',
             port: 8080,
-            path: '../mfe-dashboard',
+            path: 'mfe-submodules/mfe-dashboard',
           },
     ]
 }
