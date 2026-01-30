@@ -1,194 +1,88 @@
-name: Build and Deploy
+name: Build and Deploy (Netlify)
 
 on:
-  # Trigger on push to main/master
   push:
-    branches:
-      - main
-      - master
-  
-  # Trigger on pull requests
+    branches: [main, master]
+
   pull_request:
-    branches:
-      - main
-      - master
-  
-  # Allow manual trigger from GitHub UI
+    branches: [main, master]
+
   workflow_dispatch:
 
-# Define jobs
 jobs:
   build-and-deploy:
-    name: Build and Deploy MFE Host
     runs-on: ubuntu-latest
-    
+
     steps:
       # ============================================
-      # STEP 1: Checkout code with submodules
+      # Checkout repo + submodules
       # ============================================
-      - name: 📥 Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive  # 🔥 Critical: Pull all MFE submodules
-          fetch-depth: 0         # Full git history
-      
+          submodules: recursive
+          fetch-depth: 0
+
       # ============================================
-      # STEP 2: Verify submodules were cloned
+      # Setup Node
       # ============================================
-      - name: 🔍 Verify submodules
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Checking submodules..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
-          if [ -d "mfe-submodules" ]; then
-            echo "✅ mfe-submodules directory exists"
-            ls -la mfe-submodules/
-          else
-            echo "❌ mfe-submodules directory NOT found"
-            exit 1
-          fi
-          
-          # Check each MFE
-          for dir in mfe-submodules/*/; do
-            if [ -d "$dir" ]; then
-              mfe_name=$(basename "$dir")
-              echo "✅ MFE found: $mfe_name"
-              
-              # Verify package.json exists
-              if [ -f "${dir}package.json" ]; then
-                echo "   ✅ package.json exists"
-              else
-                echo "   ❌ package.json missing"
-                exit 1
-              fi
-            fi
-          done
-          
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "All submodules verified successfully!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      
-      # ============================================
-      # STEP 3: Setup Node.js
-      # ============================================
-      - name: 🔧 Setup Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-      
+          node-version: 18
+          cache: npm
+
       # ============================================
-      # STEP 4: Install Host dependencies
+      # Install Host dependencies
       # ============================================
-      - name: 📦 Install Host dependencies
+      - name: Install Host dependencies
+        run: npm ci
+
+      # ============================================
+      # Install MFE dependencies
+      # ============================================
+      - name: Install MFE dependencies
         run: |
-          echo "Installing host dependencies..."
-          npm ci
-      
-      # ============================================
-      # STEP 5: Install all MFE dependencies
-      # ============================================
-      - name: 📦 Install MFE dependencies
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Installing dependencies for all MFEs..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
           for dir in mfe-submodules/*/; do
-            if [ -f "${dir}package.json" ]; then
-              mfe_name=$(basename "$dir")
-              echo "📦 Installing dependencies for: $mfe_name"
-              cd "${dir}"
+            if [ -f "$dir/package.json" ]; then
+              cd "$dir"
               npm ci
-              cd - > /dev/null
-              echo "✅ $mfe_name dependencies installed"
-              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              cd - >/dev/null
             fi
           done
-          
-          echo "All MFE dependencies installed successfully!"
-      
+
       # ============================================
-      # STEP 6: Type check
+      # Type check (fail fast)
       # ============================================
-      - name: 🔍 Type check
+      - name: Type check
+        run: npm run type-check
+
+      # ============================================
+      # Production build
+      # ============================================
+      - name: Build application
+        run: npm run build
+
+      # ============================================
+      # Validate build output
+      # ============================================
+      - name: Validate build output
         run: |
-          echo "Running TypeScript type checking..."
-          npm run type-check
-      
+          test -d dist
+          test -f dist/index.html
+
       # ============================================
-      # STEP 7: Build for production
+      # Deploy to Netlify (PRODUCTION)
       # ============================================
-      - name: 🏗️ Build application
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Building Host + All MFEs..."
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          npm run build
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Build completed successfully!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-      
-      # ============================================
-      # STEP 8: Verify build output
-      # ============================================
-      - name: 📋 Verify build output
-        run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Build output contents:"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          ls -lah dist/
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
-          # Check for essential files
-          if [ ! -f "dist/index.html" ]; then
-            echo "❌ index.html not found in build output"
-            exit 1
-          fi
-          echo "✅ index.html found"
-          
-          # Check total size
-          build_size=$(du -sh dist/ | cut -f1)
-          echo "📦 Total build size: $build_size"
-      
-      # ============================================
-      # STEP 9: Upload build artifacts
-      # ============================================
-      - name: 📤 Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-build-${{ github.sha }}
-          path: dist/
-          retention-days: 30
-      
-      # ============================================
-      # STEP 10: Deploy to GitHub Pages
-      # ============================================
-      - name: 🚀 Deploy to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          # Optional: custom commit message
-          commit_message: 'Deploy from commit ${{ github.sha }}'
-      
-      # ============================================
-      # STEP 11: Deployment summary
-      # ============================================
-      - name: 📊 Deployment summary
+      - name: Deploy to Netlify
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         run: |
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🎉 Deployment Successful!"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "🌐 Your app will be available at:"
-          echo "   https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "📦 Build included:"
-          cd mfe-submodules
-          for dir in */; do
-            echo "   ✅ $(basename $dir)"
-          done
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          npm install -g netlify-cli
+          netlify deploy \
+            --dir=dist \
+            --prod \
+            --site=$NETLIFY_SITE_ID \
+            --auth=$NETLIFY_AUTH_TOKEN
+        env:
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
